@@ -1,26 +1,268 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Clock, CheckCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, CheckCircle, Highlighter as HighlighterIcon } from 'lucide-react';
 import { getTopicById, getNextTopic, getPreviousTopic } from '../data/topicStructure';
 import { useProgress } from '../contexts/ProgressContext';
+import Bookmarks from '../components/Bookmarks';
+import clsx from 'clsx';
 
 const TopicPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { state, setCurrentTopic, completeCurrentTopic } = useProgress();
+  const { state, setCurrentTopic, toggleTopicCompletion } = useProgress();
   const { completedTopics } = state;
+  const hasScrolled = useRef(false);
+
+  // State for feature panels
+  const [isHighlighterActive, setIsHighlighterActive] = useState(false);
+  const [isBookmarksOpen, setIsBookmarksOpen] = useState(false);
 
   const topic = id ? getTopicById(id) : null;
   const nextTopic = id ? getNextTopic(id) : null;
   const previousTopic = id ? getPreviousTopic(id) : null;
 
+  // Load and save highlights to localStorage
+  const getStorageKey = (topicId: string) => `auto-highlights-${topicId}`;
+  
+  const loadHighlights = (topicId: string) => {
+    try {
+      const saved = localStorage.getItem(getStorageKey(topicId));
+      return saved ? JSON.parse(saved) : [];
+    } catch (error) {
+      console.error('Error loading highlights:', error);
+      return [];
+    }
+  };
+
+  const saveHighlights = (topicId: string, highlights: any[]) => {
+    try {
+      localStorage.setItem(getStorageKey(topicId), JSON.stringify(highlights));
+    } catch (error) {
+      console.error('Error saving highlights:', error);
+    }
+  };
+
+  const getTopicHighlights = (topicId: string) => {
+    return loadHighlights(topicId);
+  };
+
+  const addTopicHighlight = (topicId: string, highlightData: any) => {
+    const existing = loadHighlights(topicId);
+    const newHighlight = {
+      id: `highlight-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      ...highlightData,
+      createdAt: Date.now()
+    };
+    const updated = [...existing, newHighlight];
+    saveHighlights(topicId, updated);
+    return newHighlight;
+  };
+
+  const removeTopicHighlight = (topicId: string, highlightId: string) => {
+    const existing = loadHighlights(topicId);
+    const updated = existing.filter((h: any) => h.id !== highlightId);
+    saveHighlights(topicId, updated);
+  };
+
   useEffect(() => {
     if (id) {
       setCurrentTopic(id);
-      // Scroll to top when topic changes
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      hasScrolled.current = false;
     }
   }, [id, setCurrentTopic]);
+
+  // Restore highlights when topic loads
+  useEffect(() => {
+    if (!topic) return;
+    
+    const restoreHighlights = () => {
+      // Clear any existing highlights first
+      document.querySelectorAll('.auto-highlight').forEach(span => {
+        const parent = span.parentNode;
+        if (parent) {
+          const textNode = document.createTextNode(span.textContent || '');
+          parent.replaceChild(textNode, span);
+          
+          // Safely normalize
+          try {
+            if (parent && typeof parent.normalize === 'function') {
+              parent.normalize();
+            }
+          } catch (error) {
+            console.warn('Could not normalize during cleanup:', error);
+          }
+        }
+      });
+
+      // Get saved highlights for this topic
+      const savedHighlights = getTopicHighlights(topic.id);
+      
+      console.log('Restoring highlights for topic:', topic.id, savedHighlights);
+      
+      // If no highlights saved, we're done
+      if (savedHighlights.length === 0) {
+        console.log('No highlights to restore');
+        return;
+      }
+
+      // Apply each saved highlight
+      savedHighlights.forEach((highlight: any) => {
+        try {
+          const topicContent = document.getElementById('topic-content');
+          if (!topicContent) return;
+
+          // Find text nodes that contain the highlighted text
+          const walker = document.createTreeWalker(
+            topicContent,
+            NodeFilter.SHOW_TEXT,
+            node => {
+              // Skip nodes that are already inside highlights
+              const parent = node.parentElement;
+              return parent && !parent.closest('.auto-highlight') 
+                ? NodeFilter.FILTER_ACCEPT 
+                : NodeFilter.FILTER_REJECT;
+            }
+          );
+
+          let textNode: Text | null = null;
+          let found = false;
+          
+          while ((textNode = walker.nextNode() as Text) && !found) {
+            const nodeText = textNode.textContent || '';
+            const highlightIndex = nodeText.indexOf(highlight.text);
+            
+            if (highlightIndex !== -1) {
+              // Split the text node and wrap the highlight
+              const beforeText = nodeText.substring(0, highlightIndex);
+              const highlightText = nodeText.substring(highlightIndex, highlightIndex + highlight.text.length);
+              const afterText = nodeText.substring(highlightIndex + highlight.text.length);
+
+              const parent = textNode.parentNode!;
+              
+              // Create highlight span
+              const span = document.createElement('span');
+              span.className = 'auto-highlight bg-yellow-300 dark:bg-yellow-600/50 rounded px-1';
+              span.textContent = highlightText;
+              span.setAttribute('data-highlight-id', highlight.id);
+
+              // Insert new nodes
+              if (beforeText) parent.insertBefore(document.createTextNode(beforeText), textNode);
+              parent.insertBefore(span, textNode);
+              if (afterText) parent.insertBefore(document.createTextNode(afterText), textNode);
+              parent.removeChild(textNode);
+              
+              found = true; // Found and applied this highlight, move to next
+            }
+          }
+        } catch (error) {
+          console.error('Error restoring highlight:', error);
+        }
+      });
+    };
+
+    // Small delay to ensure DOM is ready
+    setTimeout(restoreHighlights, 100);
+  }, [topic]);
+
+  // New automatic highlighting effect
+  useEffect(() => {
+    if (!isHighlighterActive) return;
+
+    const handleTextSelection = () => {
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) return;
+
+      const range = selection.getRangeAt(0);
+      const selectedText = range.toString().trim();
+      
+      if (selectedText.length === 0) return;
+
+      // Check if selection is within topic content
+      const topicContent = document.getElementById('topic-content');
+      if (!topicContent || !topicContent.contains(range.commonAncestorContainer)) return;
+
+      // Check if clicking on already highlighted text to remove it
+      const startContainer = range.startContainer;
+      const element = startContainer.nodeType === Node.TEXT_NODE 
+        ? startContainer.parentElement 
+        : startContainer as Element;
+
+      if (element && element.closest('.auto-highlight')) {
+        // Remove highlight
+        const highlightSpan = element.closest('.auto-highlight') as HTMLElement;
+        if (highlightSpan && highlightSpan.parentNode && topic) {
+          const highlightId = highlightSpan.getAttribute('data-highlight-id');
+          const highlightText = highlightSpan.textContent || '';
+          const parent = highlightSpan.parentNode;
+          
+          console.log('Removing highlight:', { highlightId, highlightText, topicId: topic.id });
+          
+          // Create text node and replace
+          const textNode = document.createTextNode(highlightText);
+          parent.replaceChild(textNode, highlightSpan);
+          
+          // Safely normalize only if parent still exists and has normalize method
+          try {
+            if (parent && typeof parent.normalize === 'function') {
+              parent.normalize();
+            }
+          } catch (error) {
+            console.warn('Could not normalize parent node:', error);
+          }
+          
+          // Remove from localStorage
+          if (highlightId) {
+            removeTopicHighlight(topic.id, highlightId);
+            
+            // Verify removal by checking what's left in storage
+            const remaining = getTopicHighlights(topic.id);
+            console.log('Remaining highlights after removal:', remaining);
+          }
+        }
+      } else if (topic) {
+        // Add highlight
+        try {
+          const span = document.createElement('span');
+          span.className = 'auto-highlight bg-yellow-300 dark:bg-yellow-600/50 rounded px-1';
+          
+          // Save to localStorage before applying
+          const highlightData = {
+            text: selectedText,
+            topicId: topic.id
+          };
+          const savedHighlight = addTopicHighlight(topic.id, highlightData);
+          span.setAttribute('data-highlight-id', savedHighlight.id);
+          
+          range.surroundContents(span);
+        } catch (error) {
+          // Fallback for complex selections
+          console.log('Selection spans multiple elements, skipping highlight');
+        }
+      }
+
+      // Clear selection
+      selection.removeAllRanges();
+    };
+
+    // Add slight delay to allow for double-click and other interactions
+    const handleMouseUp = () => {
+      setTimeout(handleTextSelection, 100);
+    };
+
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => document.removeEventListener('mouseup', handleMouseUp);
+  }, [isHighlighterActive]);
+
+  // Separate effect for scrolling to prevent interference
+  useEffect(() => {
+    if (id && !hasScrolled.current) {
+      hasScrolled.current = true;
+      // Use requestAnimationFrame to ensure DOM is ready
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    }
+  }, [id]);
 
   if (!topic) {
     return (
@@ -43,8 +285,8 @@ const TopicPage: React.FC = () => {
   const TopicContent = topic.content;
 
   const handleNext = () => {
-    if (!isCompleted) {
-      completeCurrentTopic();
+    if (!isCompleted && topic) {
+      toggleTopicCompletion(topic.id);
     }
     if (nextTopic) {
       navigate(`/topic/${nextTopic.id}`);
@@ -93,6 +335,18 @@ const TopicPage: React.FC = () => {
                 <span className="text-sm font-medium">Completed</span>
               </div>
             )}
+            <button
+              onClick={() => toggleTopicCompletion(topic.id)}
+              className={clsx(
+                "flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors text-sm font-medium",
+                isCompleted
+                  ? "bg-gray-600 hover:bg-gray-700 text-white"
+                  : "bg-green-600 hover:bg-green-700 text-white"
+              )}
+            >
+              <CheckCircle className="w-4 h-4" />
+              <span>{isCompleted ? "Mark as Incomplete" : "Mark as Completed"}</span>
+            </button>
           </div>
         </div>
 
@@ -109,7 +363,7 @@ const TopicPage: React.FC = () => {
 
       {/* Content */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-        <div className="p-8">
+        <div id="topic-content" className="p-8">
           <TopicContent />
         </div>
 
@@ -156,6 +410,34 @@ const TopicPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Study Tools */}
+      {topic && (
+        <>
+          <Bookmarks
+            isOpen={isBookmarksOpen}
+            onToggle={() => setIsBookmarksOpen(!isBookmarksOpen)}
+          />
+          
+          {/* Simple Highlighter Toggle */}
+          <div className="fixed top-72 right-4 z-40">
+            <button
+              onClick={() => setIsHighlighterActive(!isHighlighterActive)}
+              className={`p-3 rounded-lg shadow-lg border-2 transition-all duration-200 transform hover:scale-105 ${
+                isHighlighterActive
+                  ? 'bg-yellow-400 border-yellow-500 text-yellow-900 shadow-yellow-200'
+                  : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+              }`}
+              title={isHighlighterActive ? 'Click to disable highlighting mode' : 'Click to enable highlighting mode'}
+            >
+              <HighlighterIcon size={20} />
+              {isHighlighterActive && (
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-600 rounded-full animate-pulse"></div>
+              )}
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 };

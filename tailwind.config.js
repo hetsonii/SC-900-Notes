@@ -17,6 +17,9 @@ export default {
           800: '#1e40af',
           900: '#1e3a8a',
         },
+        gray: {
+          750: '#374151',
+        },
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in-out',

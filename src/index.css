@@ -49,3 +49,56 @@
 .hide-horizontal-scrollbar::-webkit-scrollbar:horizontal {
   display: none; /* Chrome, Safari, Opera */
 }
+
+/* Quill Editor Dark Mode Support */
+.dark .ql-toolbar {
+  border-color: #4b5563 !important;
+  background: #374151 !important;
+}
+
+.dark .ql-toolbar .ql-stroke {
+  stroke: #d1d5db !important;
+}
+
+.dark .ql-toolbar .ql-fill {
+  fill: #d1d5db !important;
+}
+
+.dark .ql-toolbar .ql-picker-label {
+  color: #d1d5db !important;
+}
+
+.dark .ql-container {
+  border-color: #4b5563 !important;
+  background: #374151 !important;
+}
+
+.dark .ql-editor {
+  color: #f3f4f6 !important;
+}
+
+.dark .ql-editor::before {
+  color: #9ca3af !important;
+}
+
+/* Text clamp utilities */
+.line-clamp-1 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.line-clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.line-clamp-3 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}

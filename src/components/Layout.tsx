@@ -1,13 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import ScrollToTop from './ScrollToTop';
 import ThemeToggle from './ThemeToggle';
+import StudyNotes from './StudyNotes';
+import PinnedStudyNotes from './PinnedStudyNotes';
 import { useProgress } from '../contexts/ProgressContext';
 
 const Layout: React.FC = () => {
   const { state } = useProgress();
   const { sidebarCollapsed, sidebarWidth } = state;
+  const [isGlobalNotesOpen, setIsGlobalNotesOpen] = useState(false);
 
   const mainMarginLeft = sidebarCollapsed ? 64 : sidebarWidth;
 
@@ -15,9 +18,18 @@ const Layout: React.FC = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-200">
       <Sidebar />
       
-      <div className="fixed top-4 right-4 z-30">
+      <div className="fixed top-4 right-4 z-30 flex space-x-2">
         <ThemeToggle />
       </div>
+
+      {/* Global Study Notes Access */}
+      <StudyNotes
+        isOpen={isGlobalNotesOpen}
+        onToggle={() => setIsGlobalNotesOpen(!isGlobalNotesOpen)}
+      />
+
+      {/* Pinned Study Notes */}
+      <PinnedStudyNotes />
 
       <main
         className="transition-all duration-300 ease-in-out"
