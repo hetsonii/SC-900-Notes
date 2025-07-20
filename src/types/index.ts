@@ -6,6 +6,7 @@ export interface Topic {
   section: string;
   completed?: boolean;
   estimatedTime?: number;
+  difficulty?: 'easy' | 'medium' | 'hard';
 }
 
 export interface Section {
@@ -59,6 +60,8 @@ export interface ProgressState {
   highlights: Highlight[];
   bookmarks: Bookmark[];
   studyNotes: StudyNote[];
+  topicDifficulties: Record<string, 'easy' | 'medium' | 'hard'>;
+  examDate: string | null; // ISO date string
 }
 
 export interface ThemeContextType {
@@ -90,4 +93,12 @@ export interface ProgressContextType {
   removeStudyNote: (noteId: string) => void;
   getStudyNotes: (topicId?: string) => StudyNote[];
   exportNotesAsPDF: () => Promise<void>;
+  // Difficulty assessment functions
+  setTopicDifficulty: (topicId: string, difficulty: 'easy' | 'medium' | 'hard') => void;
+  getTopicDifficulty: (topicId: string) => 'easy' | 'medium' | 'hard' | undefined;
+  getTopicsByDifficulty: (difficulty: 'easy' | 'medium' | 'hard') => string[];
+  // Exam date functions
+  setExamDate: (date: string) => void;
+  getExamDate: () => string | null;
+  getDaysUntilExam: () => number | null;
 }

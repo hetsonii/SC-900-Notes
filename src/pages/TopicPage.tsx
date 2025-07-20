@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Clock, CheckCircle, Highlighter as Highlight
 import { getTopicById, getNextTopic, getPreviousTopic } from '../data/topicStructure';
 import { useProgress } from '../contexts/ProgressContext';
 import Bookmarks from '../components/Bookmarks';
+import DifficultyAssessment from '../components/DifficultyAssessment';
 import clsx from 'clsx';
 
 const TopicPage: React.FC = () => {
@@ -316,9 +317,12 @@ const TopicPage: React.FC = () => {
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
                 {topic.title}
               </h1>
-              <p className="text-gray-600 dark:text-gray-300 mt-1">
+              <p className="text-gray-600 dark:text-gray-300 mt-1 mb-3">
                 {topic.description}
               </p>
+              
+              {/* Difficulty Assessment */}
+              <DifficultyAssessment topicId={topic.id} />
             </div>
           </div>
           

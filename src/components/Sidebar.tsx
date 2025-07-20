@@ -7,7 +7,7 @@ import clsx from 'clsx';
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
-  const { state, toggleSidebar, setSidebarWidth } = useProgress();
+  const { state, toggleSidebar, setSidebarWidth, getTopicDifficulty } = useProgress();
   const { completedTopics, sidebarCollapsed, sidebarWidth } = state;
   const sidebarRef = useRef<HTMLDivElement>(null);
   const isResizing = useRef(false);
@@ -117,6 +117,16 @@ const Sidebar: React.FC = () => {
                     {section.topics.map((topic) => {
                       const isActive = location.pathname === `/topic/${topic.id}`;
                       const isCompleted = completedTopics.has(topic.id);
+                      const difficulty = getTopicDifficulty(topic.id);
+
+                      const getDifficultyEmoji = (diff: string | undefined) => {
+                        switch (diff) {
+                          case 'easy': return '😊';
+                          case 'medium': return '🤔';
+                          case 'hard': return '😰';
+                          default: return null;
+                        }
+                      };
 
                       return (
                         <Link
@@ -134,7 +144,12 @@ const Sidebar: React.FC = () => {
                           ) : (
                             <Circle className="w-4 h-4 text-gray-400 flex-shrink-0" />
                           )}
-                          <span className="truncate">{topic.title}</span>
+                          <span className="truncate flex-1">{topic.title}</span>
+                          {getDifficultyEmoji(difficulty) && (
+                            <span className="text-xs" title={`Difficulty: ${difficulty}`}>
+                              {getDifficultyEmoji(difficulty)}
+                            </span>
+                          )}
                         </Link>
                       );
                     })}

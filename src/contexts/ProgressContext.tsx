@@ -29,7 +29,11 @@ type ProgressAction =
   // Study note actions
   | { type: 'ADD_STUDY_NOTE'; payload: StudyNote }
   | { type: 'UPDATE_STUDY_NOTE'; payload: { id: string; updates: Partial<StudyNote> } }
-  | { type: 'REMOVE_STUDY_NOTE'; payload: string };
+  | { type: 'REMOVE_STUDY_NOTE'; payload: string }
+  // Difficulty actions
+  | { type: 'SET_TOPIC_DIFFICULTY'; payload: { topicId: string; difficulty: 'easy' | 'medium' | 'hard' } }
+  // Exam date actions
+  | { type: 'SET_EXAM_DATE'; payload: string };
 
 const initialState: ProgressState = {
   completedTopics: new Set(),
@@ -39,6 +43,8 @@ const initialState: ProgressState = {
   highlights: [],
   bookmarks: [],
   studyNotes: [],
+  topicDifficulties: {},
+  examDate: null,
 };
 
 function progressReducer(state: ProgressState, action: ProgressAction): ProgressState {
@@ -78,6 +84,8 @@ function progressReducer(state: ProgressState, action: ProgressAction): Progress
         highlights: action.payload.highlights || state.highlights,
         bookmarks: action.payload.bookmarks || state.bookmarks,
         studyNotes: action.payload.studyNotes || state.studyNotes,
+        topicDifficulties: action.payload.topicDifficulties || state.topicDifficulties,
+        examDate: action.payload.examDate || state.examDate,
       };
     // Highlight cases
     case 'ADD_HIGHLIGHT':
@@ -117,6 +125,18 @@ function progressReducer(state: ProgressState, action: ProgressAction): Progress
         ...state, 
         studyNotes: state.studyNotes.filter(n => n.id !== action.payload) 
       };
+    // Difficulty cases
+    case 'SET_TOPIC_DIFFICULTY':
+      return {
+        ...state,
+        topicDifficulties: {
+          ...state.topicDifficulties,
+          [action.payload.topicId]: action.payload.difficulty
+        }
+      };
+    // Exam date cases
+    case 'SET_EXAM_DATE':
+      return { ...state, examDate: action.payload };
     default:
       return state;
   }
@@ -146,6 +166,8 @@ export const ProgressProvider: React.FC<ProgressProviderProps> = ({ children, to
             highlights: parsedState.highlights || [],
             bookmarks: parsedState.bookmarks || [],
             studyNotes: parsedState.studyNotes || [],
+            topicDifficulties: parsedState.topicDifficulties || {},
+            examDate: parsedState.examDate || null,
           }
         });
       } catch (error) {
@@ -167,9 +189,11 @@ export const ProgressProvider: React.FC<ProgressProviderProps> = ({ children, to
       highlights: state.highlights,
       bookmarks: state.bookmarks,
       studyNotes: state.studyNotes,
+      topicDifficulties: state.topicDifficulties,
+      examDate: state.examDate,
     };
     localStorage.setItem('sc900-progress', JSON.stringify(stateToSave));
-  }, [state.completedTopics, state.sidebarCollapsed, state.sidebarWidth, state.highlights, state.bookmarks, state.studyNotes, hasLoaded]);
+  }, [state.completedTopics, state.sidebarCollapsed, state.sidebarWidth, state.highlights, state.bookmarks, state.studyNotes, state.topicDifficulties, state.examDate, hasLoaded]);
 
   const completeCurrentTopic = useCallback(() => {
     dispatch({ type: 'COMPLETE_CURRENT_TOPIC' });
@@ -404,6 +428,39 @@ export const ProgressProvider: React.FC<ProgressProviderProps> = ({ children, to
     }
   }, [state.studyNotes]);
 
+  // Difficulty assessment functions
+  const setTopicDifficulty = useCallback((topicId: string, difficulty: 'easy' | 'medium' | 'hard') => {
+    dispatch({ type: 'SET_TOPIC_DIFFICULTY', payload: { topicId, difficulty } });
+  }, []);
+
+  const getTopicDifficulty = useCallback((topicId: string) => {
+    return state.topicDifficulties[topicId];
+  }, [state.topicDifficulties]);
+
+  const getTopicsByDifficulty = useCallback((difficulty: 'easy' | 'medium' | 'hard') => {
+    return Object.entries(state.topicDifficulties)
+      .filter(([, diff]) => diff === difficulty)
+      .map(([topicId]) => topicId);
+  }, [state.topicDifficulties]);
+
+  // Exam date functions
+  const setExamDate = useCallback((date: string) => {
+    dispatch({ type: 'SET_EXAM_DATE', payload: date });
+  }, []);
+
+  const getExamDate = useCallback(() => {
+    return state.examDate;
+  }, [state.examDate]);
+
+  const getDaysUntilExam = useCallback(() => {
+    if (!state.examDate) return null;
+    const examDate = new Date(state.examDate);
+    const today = new Date();
+    const diffTime = examDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  }, [state.examDate]);
+
   return (
     <ProgressContext.Provider value={{
       state,
@@ -429,6 +486,14 @@ export const ProgressProvider: React.FC<ProgressProviderProps> = ({ children, to
       removeStudyNote,
       getStudyNotes,
       exportNotesAsPDF,
+      // Difficulty assessment functions
+      setTopicDifficulty,
+      getTopicDifficulty,
+      getTopicsByDifficulty,
+      // Exam date functions
+      setExamDate,
+      getExamDate,
+      getDaysUntilExam,
     }}>
       {children}
     </ProgressContext.Provider>

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { BookOpen, Users, Award, Clock, TrendingUp, CheckCircle } from 'lucide-react';
 import { sections } from '../data/topicStructure';
 import { useProgress } from '../contexts/ProgressContext';
+import DifficultyOverview from '../components/DifficultyOverview';
 
 const HomePage: React.FC = () => {
   const { getProgress } = useProgress();
@@ -74,6 +75,9 @@ const HomePage: React.FC = () => {
           </p>
         </div>
       )}
+
+      {/* Difficulty Overview */}
+      <DifficultyOverview />
 
       {/* Exam Overview */}
       <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-sm border border-gray-200 dark:border-gray-700">

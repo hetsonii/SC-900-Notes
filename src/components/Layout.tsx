@@ -5,6 +5,8 @@ import ScrollToTop from './ScrollToTop';
 import ThemeToggle from './ThemeToggle';
 import StudyNotes from './StudyNotes';
 import PinnedStudyNotes from './PinnedStudyNotes';
+import Breadcrumbs from './Breadcrumbs';
+import ExamCountdown from './ExamCountdown';
 import { useProgress } from '../contexts/ProgressContext';
 
 const Layout: React.FC = () => {
@@ -18,7 +20,12 @@ const Layout: React.FC = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-200">
       <Sidebar />
       
-      <div className="fixed top-4 right-4 z-30 flex space-x-2">
+      {/* Top bar with exam countdown and theme toggle */}
+      <div 
+        className="fixed top-4 right-4 z-30 flex items-center space-x-3"
+        style={{ marginLeft: mainMarginLeft }}
+      >
+        <ExamCountdown />
         <ThemeToggle />
       </div>
 
@@ -36,6 +43,9 @@ const Layout: React.FC = () => {
         style={{ marginLeft: mainMarginLeft }}
       >
         <div className="max-w-6xl mx-auto px-6 py-8">
+          {/* Breadcrumbs */}
+          <Breadcrumbs />
+          
           <Outlet />
         </div>
       </main>
