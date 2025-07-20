@@ -10,7 +10,7 @@
 
 **A comprehensive, interactive study platform for the Microsoft SC-900 Security, Compliance, and Identity Fundamentals exam**
 
-[📚 Start Studying](#getting-started) • [🎨 Features](#-features) • [🔧 Installation](#-installation) • [📖 Usage](#-usage)
+[📚 Start Studying](https://sc-900-notes.vercel.app) • [🎨 Features](#-features) • [🔧 Installation](#-installation) • [📖 Usage](#-usage)
 
 </div>
 
